@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>💌 Send a Secret</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+    h1 {
+      color: #ff4081;
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      text-shadow: 0 0 10px #ff4081;
+    }
+    textarea {
+      width: 80%;
+      height: 150px;
+      padding: 1em;
+      background: #1a1a1a;
+      color: white;
+      border: 1px solid #333;
+      border-radius: 10px;
+      font-size: 1em;
+      resize: none;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 30px;
+      background: #ff4081;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #e73370;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <h1>🕵️‍♂️ Drop your anonymous Message ☕</h1>
+  <textarea id="messageBox" placeholder="Type your message..."></textarea><br />
+  <button onclick="sendMessage()">Send 🔥</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDnFoUVpIbt6R7vYffl1tcKk-Wh0CnBuE0",
+      authDomain: "mbbs-anonoy-2.firebaseapp.com",
+      projectId: "mbbs-anonoy-2",
+      storageBucket: "mbbs-anonoy-2.firebasestorage.app",
+      messagingSenderId: "946129798565",
+      appId: "1:946129798565:web:4033df1bf6a5f0d0d7944c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.sendMessage = async () => {
+      const text = document.getElementById("messageBox").value.trim();
+      if (!text) return alert("Message cannot be empty.");
+
+      try {
+        await addDoc(collection(db, "drops"), {
+          text,
+          timestamp: serverTimestamp()
+        });
+        alert("🔥 Message sent anonymously!");
+        document.getElementById("messageBox").value = "";
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        alert("Something went wrong.");
+      }
+    };
+  </script>
+</body>
+</html>
