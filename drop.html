@@ -9,11 +9,8 @@
       font-family: 'Poppins', sans-serif;
       background: #0d0d0d;
       color: #ff4d4d;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem 1rem;
       margin: 0;
+      padding: 2rem 1rem;
       text-align: center;
     }
     h1 {
@@ -21,12 +18,13 @@
       text-shadow: 0 0 8px #ff4d4d, 0 0 12px #aa0000;
       margin-bottom: 1.5rem;
     }
-    .controls {
-      margin-bottom: 1.5rem;
+    #controls {
+      position: fixed;
+      top: 10px;
+      right: 10px;
     }
     .btn {
       padding: 8px 16px;
-      margin: 0 5px;
       font-size: 0.95rem;
       background: #ff1a1a;
       color: white;
@@ -40,25 +38,39 @@
       box-shadow: 0 0 15px #ff4d4d;
     }
     .message-list {
-      width: 100%;
-      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 60px;
     }
     .card {
+      width: 90%;
+      max-width: 600px;
+      min-height: 200px;
       background: #1a1a1a;
-      border-left: 5px solid #ff4d4d;
-      border-radius: 10px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 0 12px #ff4d4d33;
-      color: #ff4d4d;
-      text-align: left;
+      border-left: 6px solid #ff4d4d;
+      border-radius: 15px;
+      box-shadow: 0 0 12px #ff4d4d55;
+      margin-bottom: 2rem;
+      padding: 2rem;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+    }
+    .card .text {
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
+      color: #ff4d4d;
+      word-wrap: break-word;
     }
     .timestamp {
-      margin-top: 0.75rem;
       font-size: 0.85rem;
       color: #ff9999;
-      text-align: right;
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
     }
     .delete-btn {
       position: absolute;
@@ -74,15 +86,30 @@
       color: #ff4d4d;
       text-shadow: 0 0 6px #ff4d4d;
     }
+    .save-btn {
+      position: absolute;
+      bottom: 10px;
+      left: 15px;
+      font-size: 0.85rem;
+      color: #ff8080;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .save-btn:hover {
+      color: #ff4d4d;
+      text-shadow: 0 0 6px #ff4d4d;
+    }
     .hidden {
       display: none;
     }
     .back {
-      margin-top: 1rem;
+      margin-top: 2rem;
       color: #ff4d4d;
       font-size: 0.9rem;
       text-decoration: underline;
       cursor: pointer;
+      display: inline-block;
     }
     .back:hover {
       text-shadow: 0 0 5px #ff4d4d;
@@ -91,12 +118,12 @@
 </head>
 <body>
   <h1>📨 Anonymous Drops</h1>
-  <div id="controls" class="controls hidden">
+  <div id="controls" class="hidden">
     <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
   </div>
   <div id="messageList" class="message-list hidden"></div>
   <div id="denied" class="hidden">❌ Access Denied</div>
-  <div class="back" onclick="history.back()">← Go back</div>
+  <a class="back" href="index.html">← Go back</a>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -146,8 +173,10 @@
         const msg = docSnap.data();
         const card = document.createElement("div");
         card.className = "card";
+        card.setAttribute("id", `card-${docSnap.id}`);
 
         const text = document.createElement("div");
+        text.className = "text";
         text.textContent = msg.text;
 
         const timestamp = document.createElement("div");
@@ -166,8 +195,16 @@
           }
         };
 
+        const save = document.createElement("button");
+        save.className = "save-btn";
+        save.textContent = "📸 Save as Image";
+        save.onclick = () => {
+          downloadCardAsImage(card, `drop-${docSnap.id}.png`);
+        };
+
         card.appendChild(del);
         card.appendChild(text);
+        card.appendChild(save);
         card.appendChild(timestamp);
         list.appendChild(card);
       });
@@ -182,14 +219,24 @@
       renderMessages();
     }
 
+    function downloadCardAsImage(cardElement, filename) {
+      html2canvas(cardElement).then(canvas => {
+        const link = document.createElement("a");
+        link.download = filename;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      });
+    }
+
     if (password === ADMIN_PASSWORD) {
       list.classList.remove("hidden");
       controls.classList.remove("hidden");
       renderMessages();
-      setInterval(renderMessages, 15000);
+      setInterval(renderMessages, 15000); // Refresh every 15 seconds
     } else {
       denied.classList.remove("hidden");
     }
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
 </html>
