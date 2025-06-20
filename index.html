@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>💌 Mbbs Anonymous </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <title>💌 Mbbs Anonymous</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
     body {
@@ -31,7 +32,7 @@
       color: white;
       border: 1px solid #333;
       border-radius: 10px;
-      font-size: 1em;
+      font-size: 16px;
       resize: none;
     }
     button {
@@ -49,12 +50,24 @@
       background: #e73370;
       transform: scale(1.05);
     }
+    .note {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: #ff8080;
+    }
+    .count {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
   </style>
 </head>
 <body>
   <h1>🕵️‍♂️ Drop your anonymous Message ☕</h1>
-  <textarea id="messageBox" placeholder="Type your message..."></textarea><br />
+  <textarea id="messageBox" placeholder="Type your message..."></textarea>
+  <div class="count" id="wordCount">Word count: 0 / 250</div>
   <button onclick="sendMessage()">Send 🔥</button>
+  <div class="note">Tap the send button once, it might send twice 😞</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -72,9 +85,25 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    const messageBox = document.getElementById("messageBox");
+    const wordCount = document.getElementById("wordCount");
+
+    messageBox.addEventListener("input", () => {
+      const words = messageBox.value.trim().split(/\s+/).filter(w => w.length > 0);
+      wordCount.textContent = `Word count: ${words.length} / 250`;
+
+      if (words.length > 250) {
+        // Trim to 250 words
+        messageBox.value = words.slice(0, 250).join(" ");
+        wordCount.textContent = `Word count: 250 / 250`;
+      }
+    });
+
     window.sendMessage = async () => {
-      const text = document.getElementById("messageBox").value.trim();
-      if (!text) return alert("Message cannot be empty.");
+      const text = messageBox.value.trim();
+      const words = text.split(/\s+/).filter(w => w.length > 0);
+      if (words.length === 0) return alert("Message cannot be empty.");
+      if (words.length > 250) return alert("Message too long. Limit: 250 words.");
 
       try {
         await addDoc(collection(db, "drops"), {
@@ -82,7 +111,8 @@
           timestamp: serverTimestamp()
         });
         alert("🔥 Message sent anonymously!");
-        document.getElementById("messageBox").value = "";
+        messageBox.value = "";
+        wordCount.textContent = "Word count: 0 / 250";
       } catch (e) {
         console.error("Error adding document: ", e);
         alert("Something went wrong.");
