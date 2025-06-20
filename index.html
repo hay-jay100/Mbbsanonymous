@@ -45,6 +45,9 @@
       font-size: 1em;
       cursor: pointer;
       transition: 0.2s;
+      display: inline-flex;
+      gap: 2px;
+      justify-content: center;
     }
     button:hover {
       background: #e73370;
@@ -60,14 +63,24 @@
       font-size: 0.9rem;
       color: #ccc;
     }
+
+    /* Animation */
+    .bounce {
+      display: inline-block;
+      animation: bounce 0.6s infinite ease-in-out;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
   </style>
 </head>
 <body>
   <h1>🕵️‍♂️ Drop your anonymous Message ☕</h1>
   <textarea id="messageBox" placeholder="Type your message..."></textarea>
   <div class="count" id="wordCount">Word count: 0 / 250</div>
-  <button onclick="sendMessage()">Send 🔥</button>
-  <div class="note">Tap the send button once, it might send twice 😞</div>
+  <button id="sendBtn" onclick="sendMessage()"><span>Send 🔥</span></button>
+  <div class="note">Talk your mind and gerrout 🤣🤣</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -87,23 +100,43 @@
 
     const messageBox = document.getElementById("messageBox");
     const wordCount = document.getElementById("wordCount");
+    const sendBtn = document.getElementById("sendBtn");
 
     messageBox.addEventListener("input", () => {
       const words = messageBox.value.trim().split(/\s+/).filter(w => w.length > 0);
       wordCount.textContent = `Word count: ${words.length} / 250`;
 
       if (words.length > 250) {
-        // Trim to 250 words
         messageBox.value = words.slice(0, 250).join(" ");
         wordCount.textContent = `Word count: 250 / 250`;
       }
     });
+
+    function setSendingAnimation() {
+      const text = "Sending...";
+      sendBtn.innerHTML = '';
+      [...text].forEach((char, i) => {
+        const span = document.createElement("span");
+        span.textContent = char;
+        if (char !== ' ') span.classList.add("bounce");
+        span.style.animationDelay = `${i * 0.05}s`;
+        sendBtn.appendChild(span);
+      });
+      sendBtn.disabled = true;
+    }
+
+    function resetButton() {
+      sendBtn.innerHTML = '<span>Send 🔥</span>';
+      sendBtn.disabled = false;
+    }
 
     window.sendMessage = async () => {
       const text = messageBox.value.trim();
       const words = text.split(/\s+/).filter(w => w.length > 0);
       if (words.length === 0) return alert("Message cannot be empty.");
       if (words.length > 250) return alert("Message too long. Limit: 250 words.");
+
+      setSendingAnimation();
 
       try {
         await addDoc(collection(db, "drops"), {
@@ -116,6 +149,8 @@
       } catch (e) {
         console.error("Error adding document: ", e);
         alert("Something went wrong.");
+      } finally {
+        resetButton();
       }
     };
   </script>
