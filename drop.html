@@ -20,38 +20,22 @@
       text-shadow: 0 0 8px #ff4d4d, 0 0 12px #aa0000;
     }
 
-    #controls {
-      text-align: right;
-      padding: 0 1rem;
-    }
-
-    .btn {
-      padding: 8px 16px;
-      font-size: 0.95rem;
-      background: #ff1a1a;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 0 10px #ff4d4d;
-      margin-top: 0.5rem;
-    }
-
-    .btn:hover {
-      background: #cc0000;
-      box-shadow: 0 0 15px #ff4d4d;
-    }
-
     .scroll-container {
       padding: 1rem;
       overflow-y: auto;
-      max-height: calc(100vh - 180px);
+      max-height: calc(100vh - 140px);
     }
 
     .message-list {
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+
+    h2 {
+      color: #ff4d4d;
+      text-align: center;
+      margin: 2rem 0 1rem;
     }
 
     .card {
@@ -134,7 +118,7 @@
 
     .back {
       display: block;
-      margin: 1.5rem auto;
+      margin: 1.5rem auto 2rem;
       color: #ff4d4d;
       font-size: 0.9rem;
       text-decoration: underline;
@@ -149,9 +133,6 @@
 </head>
 <body>
   <h1>📨 Anonymous Drops</h1>
-  <div id="controls" class="hidden">
-    <button class="btn" onclick="clearAll()">🗑️ Clear All</button>
-  </div>
 
   <div class="scroll-container">
     <div id="messageList" class="message-list hidden"></div>
@@ -181,7 +162,6 @@
 
     const list = document.getElementById("messageList");
     const denied = document.getElementById("denied");
-    const controls = document.getElementById("controls");
 
     const ADMIN_PASSWORD = "abuadmbbs";
 
@@ -194,8 +174,27 @@
       return `${Math.floor(seconds / 86400)} day(s) ago`;
     }
 
+    function formatDateHeader(date) {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      const isToday = date.toDateString() === today.toDateString();
+      const isYesterday = date.toDateString() === yesterday.toDateString();
+
+      if (isToday) return "Today";
+      if (isYesterday) return "Yesterday";
+
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      });
+    }
+
     async function renderMessages() {
       list.innerHTML = "";
+
       const q = query(collection(db, "drops"), orderBy("timestamp", "desc"));
       const snapshot = await getDocs(q);
 
@@ -204,59 +203,66 @@
         return;
       }
 
+      const grouped = {};
+
       snapshot.forEach(docSnap => {
         const msg = docSnap.data();
-        const card = document.createElement("div");
-        card.className = "card";
-        card.setAttribute("id", `card-${docSnap.id}`);
+        const time = msg.timestamp?.toDate?.() || new Date();
+        const header = formatDateHeader(time);
 
-        const text = document.createElement("div");
-        text.className = "text";
-        text.textContent = msg.text;
-
-        const timestamp = document.createElement("div");
-        timestamp.className = "timestamp";
-        timestamp.textContent = msg.timestamp?.toDate
-          ? timeAgo(msg.timestamp.toDate())
-          : "just now";
-
-        const del = document.createElement("button");
-        del.className = "delete-btn";
-        del.innerHTML = "❌";
-        del.onclick = async () => {
-          if (confirm("Delete this message?")) {
-            await deleteDoc(doc(db, "drops", docSnap.id));
-            renderMessages();
-          }
-        };
-
-        const save = document.createElement("button");
-        save.className = "save-btn";
-        save.textContent = "📸 Save as Image";
-        save.onclick = () => {
-          downloadCardAsImage(card, `drop-${docSnap.id}.png`);
-        };
-
-        const watermark = document.createElement("div");
-        watermark.className = "watermark";
-        watermark.textContent = "Hay Jay";
-        card.appendChild(watermark);
-
-        card.appendChild(del);
-        card.appendChild(text);
-        card.appendChild(save);
-        card.appendChild(timestamp);
-        list.appendChild(card);
+        if (!grouped[header]) grouped[header] = [];
+        grouped[header].push({ id: docSnap.id, ...msg });
       });
-    }
 
-    async function clearAll() {
-      if (!confirm("Delete all messages?")) return;
-      const q = await getDocs(collection(db, "drops"));
-      for (const docSnap of q.docs) {
-        await deleteDoc(doc(db, "drops", docSnap.id));
+      for (const [header, messages] of Object.entries(grouped)) {
+        const title = document.createElement("h2");
+        title.textContent = header;
+        list.appendChild(title);
+
+        messages.forEach(msg => {
+          const card = document.createElement("div");
+          card.className = "card";
+
+          const text = document.createElement("div");
+          text.className = "text";
+          text.textContent = msg.text;
+
+          const timestamp = document.createElement("div");
+          timestamp.className = "timestamp";
+          timestamp.textContent = msg.timestamp?.toDate
+            ? timeAgo(msg.timestamp.toDate())
+            : "just now";
+
+          const del = document.createElement("button");
+          del.className = "delete-btn";
+          del.innerHTML = "❌";
+          del.onclick = async () => {
+            if (confirm("Delete this message?")) {
+              await deleteDoc(doc(db, "drops", msg.id));
+              renderMessages();
+            }
+          };
+
+          const save = document.createElement("button");
+          save.className = "save-btn";
+          save.textContent = "📸 Save as Image";
+          save.onclick = () => {
+            downloadCardAsImage(card, `drop-${msg.id}.png`);
+          };
+
+          const watermark = document.createElement("div");
+          watermark.className = "watermark";
+          watermark.textContent = "Hay Jay";
+
+          card.appendChild(del);
+          card.appendChild(text);
+          card.appendChild(save);
+          card.appendChild(timestamp);
+          card.appendChild(watermark);
+
+          list.appendChild(card);
+        });
       }
-      renderMessages();
     }
 
     function downloadCardAsImage(cardElement, filename) {
@@ -280,7 +286,6 @@
 
     if (password === ADMIN_PASSWORD) {
       list.classList.remove("hidden");
-      controls.classList.remove("hidden");
       renderMessages();
       setInterval(renderMessages, 15000);
     } else {
