@@ -18,12 +18,14 @@
       margin: 0;
       text-align: center;
     }
+
     h1 {
       color: #ff4081;
       font-size: 2rem;
       margin-bottom: 1rem;
       text-shadow: 0 0 10px #ff4081;
     }
+
     textarea {
       width: 80%;
       height: 150px;
@@ -35,6 +37,7 @@
       font-size: 16px;
       resize: none;
     }
+
     button {
       margin-top: 10px;
       padding: 10px 30px;
@@ -49,10 +52,12 @@
       gap: 2px;
       justify-content: center;
     }
+
     button:hover {
       background: #e73370;
       transform: scale(1.05);
     }
+
     .count {
       margin-top: 8px;
       font-size: 0.9rem;
@@ -78,12 +83,14 @@
       justify-content: center;
       gap: 10px;
     }
+
     .like-dislike button {
       background: transparent;
       border: none;
       font-size: 1.3rem;
       cursor: pointer;
     }
+
     .disabled {
       opacity: 0.5;
       cursor: default;
@@ -103,6 +110,46 @@
       75% { transform: translateX(-1px); }
       100% { transform: translateX(0); }
     }
+
+    #toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #262626;
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      z-index: 9999;
+    }
+
+    #toast.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    #toast button {
+      background: transparent;
+      color: #ff4081;
+      border: none;
+      margin-left: 10px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .bounce {
+      display: inline-block;
+      animation: bounceLetters 1s infinite ease-in-out;
+    }
+
+    @keyframes bounceLetters {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
   </style>
 </head>
 <body>
@@ -112,6 +159,11 @@
   <button id="sendBtn" onclick="sendMessage()"><span>Send 🔥</span></button>
 
   <div id="stickyContainer" class="sticky-message">Loading message...</div>
+  <div id="toast">Message sent anonymously! <button onclick="hideToast()">✖</button></div>
+
+  <!-- Sound Effects -->
+  <audio id="clickSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3" preload="auto"></audio>
+  <audio id="sentSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -135,6 +187,9 @@
     const wordCount = document.getElementById("wordCount");
     const sendBtn = document.getElementById("sendBtn");
     const stickyContainer = document.getElementById("stickyContainer");
+    const toast = document.getElementById("toast");
+    const clickSound = document.getElementById("clickSound");
+    const sentSound = document.getElementById("sentSound");
 
     let allMessages = [];
     let currentMsg = null;
@@ -149,10 +204,29 @@
       }
     });
 
+    function playClick() {
+      clickSound?.play();
+    }
+
+    function playSentSound() {
+      sentSound?.play();
+    }
+
+    function showToast() {
+      toast.classList.add("show");
+      setTimeout(() => hideToast(), 4000);
+    }
+
+    function hideToast() {
+      toast.classList.remove("show");
+    }
+
     function setSendingAnimation() {
-      let text = "Sending...", html = "";
+      const text = "Sending...";
+      let html = "";
       [...text].forEach((c, i) => {
-        html += `<span class="bounce" style="animation-delay:${i * 0.05}s">${c}</span>`;
+        const delay = i * 0.1;
+        html += `<span class="bounce" style="animation-delay:${delay}s">${c}</span>`;
       });
       sendBtn.innerHTML = html;
       sendBtn.disabled = true;
@@ -165,11 +239,17 @@
 
     window.sendMessage = async () => {
       const text = messageBox.value.trim();
-      if (!text) return alert("Message cannot be empty.");
+      if (!text) {
+        toast.innerHTML = `You no go like type something 🤨 <button onclick="hideToast()">✖</button>`;
+        showToast();
+        return;
+      }
+
       const words = text.split(/\s+/).filter(w => w.length);
       if (words.length > 250) return alert("Limit: 250 words.");
 
       setSendingAnimation();
+      playClick();
       try {
         await addDoc(collection(db, "drops"), {
           text,
@@ -179,6 +259,9 @@
         });
         messageBox.value = "";
         wordCount.textContent = `Word count: 0 / 250`;
+        toast.innerHTML = `Message sent anonymously! <button onclick="hideToast()">✖</button>`;
+        showToast();
+        playSentSound();
       } catch (e) {
         console.error(e);
         alert("Error sending.");
@@ -186,10 +269,7 @@
       resetButton();
     };
 
-    const colors = [
-      "#1f1f1f", "#2c2c2c", "#333333", "#3b3b3b", "#262626",
-      "#292929", "#1a1a1a", "#242424", "#303030", "#181818"
-    ];
+    const colors = ["#1f1f1f", "#2c2c2c", "#333333", "#3b3b3b", "#262626", "#292929", "#1a1a1a", "#242424", "#303030", "#181818"];
     function getRandomColor() {
       return colors[Math.floor(Math.random() * colors.length)];
     }
@@ -198,8 +278,7 @@
       if (!msg) return stickyContainer.textContent = "Be the first to drop a message!";
       const { id, text, likes, dislikes } = msg;
       currentMsg = msg;
-      const bg = getRandomColor();
-      stickyContainer.style.backgroundColor = bg;
+      stickyContainer.style.backgroundColor = getRandomColor();
 
       const liked = localStorage.getItem(`liked_${id}`) === "1";
       const disliked = localStorage.getItem(`disliked_${id}`) === "1";
@@ -219,11 +298,12 @@
         if (!allMessages.length) return;
         const msg = allMessages[Math.floor(Math.random() * allMessages.length)];
         showMessage(msg);
-      }, 5000); // 5 seconds
+      }, 5000);
     }
 
     window.vote = function(id, type, already) {
       if (already) return;
+      playClick();
       localStorage.setItem(`${type}d_${id}`, "1");
       const ref = doc(db, "drops", id);
       updateDoc(ref, { [type === 'like' ? 'likes' : 'dislikes']: increment(1) });
@@ -236,6 +316,11 @@
       });
       showMessage(allMessages[0]);
       startRotation();
+    });
+
+    // Play click on all button clicks
+    document.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => playClick());
     });
   </script>
 </body>
