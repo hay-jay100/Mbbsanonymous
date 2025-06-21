@@ -5,6 +5,7 @@
   <title>📩 Anonymous Drops (Admin)</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+    * { box-sizing: border-box; }
     body {
       font-family: 'Poppins', sans-serif;
       background: #0d0d0d;
@@ -39,13 +40,13 @@
     }
 
     .card {
-      width: 90%;
+      width: 90vw;
       max-width: 600px;
-      min-height: 200px;
+      aspect-ratio: 1 / 1;
       background: #1a1a1a;
       border-left: 6px solid #ff4d4d;
-      border-radius: 15px;
-      box-shadow: 0 0 12px #ff4d4d55;
+      border-radius: 20px;
+      box-shadow: 0 0 15px #ff4d4d55;
       margin-bottom: 2rem;
       padding: 2rem;
       position: relative;
@@ -53,13 +54,35 @@
       flex-direction: column;
       justify-content: center;
       text-align: center;
+      transition: transform 0.3s;
     }
 
-    .card .text {
-      font-size: 1.1rem;
-      margin-bottom: 1.5rem;
+    .card.bounce-in {
+      animation: bounceIn 0.8s ease;
+    }
+
+    @keyframes bounceIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.3);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+      70% {
+        transform: scale(0.95);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .text {
+      font-size: 1.2rem;
       color: #ff4d4d;
       word-wrap: break-word;
+      margin-bottom: 1.5rem;
     }
 
     .timestamp {
@@ -103,26 +126,27 @@
     }
 
     .watermark {
-      position: absolute;
-      bottom: 10px;
-      right: 15px;
       font-size: 0.75rem;
       color: #ffffff88;
       font-style: italic;
-      pointer-events: none;
-    }
+  		pointer-events: none;
+  		display: none;
+  		position: absolute;
+  		bottom: 10px;
+  		left: 15px;
+	 }
 
     .hidden {
       display: none;
     }
 
     .back {
-      display: block;
-      margin: 1.5rem auto 2rem;
+      position: absolute;
+      top: 10px;
+      left: 10px;
       color: #ff4d4d;
       font-size: 0.9rem;
       text-decoration: underline;
-      text-align: center;
       cursor: pointer;
     }
 
@@ -132,6 +156,7 @@
   </style>
 </head>
 <body>
+  <a class="back" href="index.html">← Go back</a>
   <h1>📨 Anonymous Drops</h1>
 
   <div class="scroll-container">
@@ -139,19 +164,17 @@
     <div id="denied" class="hidden" style="text-align: center;">❌ Access Denied</div>
   </div>
 
-  <a class="back" href="index.html">← Go back</a>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, deleteDoc, doc, query, orderBy
+      getFirestore, collection, onSnapshot, doc, deleteDoc, query, orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDnFoUVpIbt6R7vYffl1tcKk-Wh0CnBuE0",
       authDomain: "mbbs-anonoy-2.firebaseapp.com",
       projectId: "mbbs-anonoy-2",
-      storageBucket: "mbbs-anonoy-2.firebasestorage.app",
+      storageBucket: "mbbs-anonoy-2.appspot.com",
       messagingSenderId: "946129798565",
       appId: "1:946129798565:web:4033df1bf6a5f0d0d7944c"
     };
@@ -159,11 +182,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const password = prompt("Enter admin password:");
+    const ADMIN_PASSWORD = "abuadmbbs";
 
     const list = document.getElementById("messageList");
     const denied = document.getElementById("denied");
-
-    const ADMIN_PASSWORD = "abuadmbbs";
 
     function timeAgo(date) {
       const seconds = Math.floor((new Date() - date) / 1000);
@@ -179,11 +201,8 @@
       const yesterday = new Date();
       yesterday.setDate(today.getDate() - 1);
 
-      const isToday = date.toDateString() === today.toDateString();
-      const isYesterday = date.toDateString() === yesterday.toDateString();
-
-      if (isToday) return "Today";
-      if (isYesterday) return "Yesterday";
+      if (date.toDateString() === today.toDateString()) return "Today";
+      if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
 
       return date.toLocaleDateString("en-US", {
         year: "numeric",
@@ -192,85 +211,24 @@
       });
     }
 
-    async function renderMessages() {
-      list.innerHTML = "";
+    const cardMap = new Map();
 
-      const q = query(collection(db, "drops"), orderBy("timestamp", "desc"));
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
-        list.innerHTML = "<p>No messages yet...</p>";
-        return;
-      }
-
-      const grouped = {};
-
-      snapshot.forEach(docSnap => {
-        const msg = docSnap.data();
-        const time = msg.timestamp?.toDate?.() || new Date();
-        const header = formatDateHeader(time);
-
-        if (!grouped[header]) grouped[header] = [];
-        grouped[header].push({ id: docSnap.id, ...msg });
-      });
-
-      for (const [header, messages] of Object.entries(grouped)) {
-        const title = document.createElement("h2");
-        title.textContent = header;
-        list.appendChild(title);
-
-        messages.forEach(msg => {
-          const card = document.createElement("div");
-          card.className = "card";
-
-          const text = document.createElement("div");
-          text.className = "text";
-          text.textContent = msg.text;
-
-          const timestamp = document.createElement("div");
-          timestamp.className = "timestamp";
-          timestamp.textContent = msg.timestamp?.toDate
-            ? timeAgo(msg.timestamp.toDate())
-            : "just now";
-
-          const del = document.createElement("button");
-          del.className = "delete-btn";
-          del.innerHTML = "❌";
-          del.onclick = async () => {
-            if (confirm("Delete this message?")) {
-              await deleteDoc(doc(db, "drops", msg.id));
-              renderMessages();
-            }
-          };
-
-          const save = document.createElement("button");
-          save.className = "save-btn";
-          save.textContent = "📸 Save as Image";
-          save.onclick = () => {
-            downloadCardAsImage(card, `drop-${msg.id}.png`);
-          };
-
-          const watermark = document.createElement("div");
-          watermark.className = "watermark";
-          watermark.textContent = "Hay Jay";
-
-          card.appendChild(del);
-          card.appendChild(text);
-          card.appendChild(save);
-          card.appendChild(timestamp);
-          card.appendChild(watermark);
-
-          list.appendChild(card);
+    function updateTimestampLoop() {
+      setInterval(() => {
+        cardMap.forEach(({ timestampElem, date }) => {
+          timestampElem.textContent = timeAgo(date);
         });
-      }
+      }, 15000);
     }
 
     function downloadCardAsImage(cardElement, filename) {
       const deleteBtn = cardElement.querySelector(".delete-btn");
       const saveBtn = cardElement.querySelector(".save-btn");
+      const watermark = cardElement.querySelector(".watermark");
 
-      if (deleteBtn) deleteBtn.style.display = "none";
-      if (saveBtn) saveBtn.style.display = "none";
+      deleteBtn.style.display = "none";
+      saveBtn.style.display = "none";
+      watermark.style.display = "block";
 
       html2canvas(cardElement).then(canvas => {
         const link = document.createElement("a");
@@ -278,16 +236,86 @@
         link.href = canvas.toDataURL("image/png");
         link.click();
 
-        // Restore
-        if (deleteBtn) deleteBtn.style.display = "";
-        if (saveBtn) saveBtn.style.display = "";
+        deleteBtn.style.display = "";
+        saveBtn.style.display = "";
+        watermark.style.display = "none";
       });
+    }
+
+    function createCard(msg, isNew = false) {
+      const card = document.createElement("div");
+      card.className = "card";
+      if (isNew) card.classList.add("bounce-in");
+
+      const text = document.createElement("div");
+      text.className = "text";
+      text.textContent = msg.text;
+
+      const timestamp = document.createElement("div");
+      timestamp.className = "timestamp";
+
+      const time = msg.timestamp?.toDate?.() || new Date();
+      timestamp.textContent = timeAgo(time);
+
+      const del = document.createElement("button");
+      del.className = "delete-btn";
+      del.textContent = "❌";
+      del.onclick = async () => {
+        if (confirm("Delete this message?")) {
+          await deleteDoc(doc(db, "drops", msg.id));
+        }
+      };
+
+      const save = document.createElement("button");
+      save.className = "save-btn";
+      save.textContent = "📸 Save as Image";
+      save.onclick = () => {
+        downloadCardAsImage(card, `drop-${msg.id}.png`);
+      };
+
+      const watermark = document.createElement("div");
+      watermark.className = "watermark";
+      watermark.textContent = "HAYJAY.web";
+
+      card.append(del, text, save, timestamp, watermark);
+      cardMap.set(msg.id, { timestampElem: timestamp, date: time });
+
+      return card;
+    }
+
+    function renderMessages(snapshot) {
+      const messages = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        messages.push({ id: doc.id, ...data });
+      });
+
+      const grouped = {};
+      messages.forEach(msg => {
+        const time = msg.timestamp?.toDate?.() || new Date();
+        const header = formatDateHeader(time);
+        if (!grouped[header]) grouped[header] = [];
+        grouped[header].push(msg);
+      });
+
+      list.innerHTML = "";
+      for (const [header, msgs] of Object.entries(grouped)) {
+        const title = document.createElement("h2");
+        title.textContent = header;
+        list.appendChild(title);
+
+        msgs.forEach((msg, index) => {
+          const card = createCard(msg, index === 0); // only first (latest) message bounces
+          list.appendChild(card);
+        });
+      }
     }
 
     if (password === ADMIN_PASSWORD) {
       list.classList.remove("hidden");
-      renderMessages();
-      setInterval(renderMessages, 15000);
+      const q = query(collection(db, "drops"), orderBy("timestamp", "desc"));
+      onSnapshot(q, snapshot => renderMessages(snapshot));
+      updateTimestampLoop();
     } else {
       denied.classList.remove("hidden");
     }
