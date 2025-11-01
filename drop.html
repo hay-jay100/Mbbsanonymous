@@ -129,12 +129,26 @@
       font-size: 0.75rem;
       color: #ffffff88;
       font-style: italic;
-  		pointer-events: none;
-  		display: none;
-  		position: absolute;
-  		bottom: 10px;
-  		left: 15px;
-	 }
+      pointer-events: none;
+      display: none;
+      position: absolute;
+      bottom: 10px;
+      left: 15px;
+    }
+
+    /* logo placeholder style */
+    .logo-placeholder {
+      position: absolute;
+      top: 12px;
+      left: 15px;
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      opacity: 0.9;
+      pointer-events: none;
+      display: none;
+      filter: drop-shadow(0 0 6px #ff4d4d);
+    }
 
     .hidden {
       display: none;
@@ -221,24 +235,32 @@
       }, 15000);
     }
 
+    // ✅ Updated version – opens image in new tab instead of download
     function downloadCardAsImage(cardElement, filename) {
       const deleteBtn = cardElement.querySelector(".delete-btn");
       const saveBtn = cardElement.querySelector(".save-btn");
       const watermark = cardElement.querySelector(".watermark");
+      const logo = cardElement.querySelector(".logo-placeholder");
 
       deleteBtn.style.display = "none";
       saveBtn.style.display = "none";
       watermark.style.display = "block";
+      logo.style.display = "block";
 
-      html2canvas(cardElement).then(canvas => {
-        const link = document.createElement("a");
-        link.download = filename;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
+      html2canvas(cardElement, {
+        backgroundColor: "#0d0d0d",
+        useCORS: true,
+        scale: 2
+      }).then(canvas => {
+        const imageData = canvas.toDataURL("image/png");
+        const newTab = window.open();
+        newTab.document.write('<img src="' + imageData + '" style="width:100%;height:auto;">');
+        newTab.document.title = filename + ".png";
 
         deleteBtn.style.display = "";
         saveBtn.style.display = "";
         watermark.style.display = "none";
+        logo.style.display = "none";
       });
     }
 
@@ -253,7 +275,6 @@
 
       const timestamp = document.createElement("div");
       timestamp.className = "timestamp";
-
       const time = msg.timestamp?.toDate?.() || new Date();
       timestamp.textContent = timeAgo(time);
 
@@ -270,14 +291,20 @@
       save.className = "save-btn";
       save.textContent = "📸 Save as Image";
       save.onclick = () => {
-        downloadCardAsImage(card, `drop-${msg.id}.png`);
+        downloadCardAsImage(card, `drop-${msg.id}`);
       };
 
       const watermark = document.createElement("div");
       watermark.className = "watermark";
       watermark.textContent = "HAYJAY.web";
 
-      card.append(del, text, save, timestamp, watermark);
+      // ✅ Use your own logo file
+      const logo = document.createElement("img");
+      logo.className = "logo-placeholder";
+      logo.src = "logo.png"; // your logo.png in the same folder
+      logo.alt = "Logo";
+
+      card.append(del, text, save, timestamp, watermark, logo);
       cardMap.set(msg.id, { timestampElem: timestamp, date: time });
 
       return card;
@@ -305,7 +332,7 @@
         list.appendChild(title);
 
         msgs.forEach((msg, index) => {
-          const card = createCard(msg, index === 0); // only first (latest) message bounces
+          const card = createCard(msg, index === 0);
           list.appendChild(card);
         });
       }
@@ -320,6 +347,7 @@
       denied.classList.remove("hidden");
     }
   </script>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
 </html>
