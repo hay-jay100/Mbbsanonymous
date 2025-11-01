@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <title>📩 Anonymous Drops (Admin)</title>
+
+  <!-- ✅ PWA manifest + theme -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d0d0d">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
     * { box-sizing: border-box; }
@@ -136,7 +142,7 @@
       left: 15px;
     }
 
-    /* logo placeholder style */
+    /* ✅ Logo placeholder */
     .logo-placeholder {
       position: absolute;
       top: 12px;
@@ -180,9 +186,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import {
-      getFirestore, collection, onSnapshot, doc, deleteDoc, query, orderBy
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDnFoUVpIbt6R7vYffl1tcKk-Wh0CnBuE0",
@@ -214,15 +218,9 @@
       const today = new Date();
       const yesterday = new Date();
       yesterday.setDate(today.getDate() - 1);
-
       if (date.toDateString() === today.toDateString()) return "Today";
       if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      });
+      return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
     }
 
     const cardMap = new Map();
@@ -235,7 +233,7 @@
       }, 15000);
     }
 
-    // ✅ Updated version – opens image in new tab instead of download
+    // ✅ Opens image in new tab instead of download
     function downloadCardAsImage(cardElement, filename) {
       const deleteBtn = cardElement.querySelector(".delete-btn");
       const saveBtn = cardElement.querySelector(".save-btn");
@@ -256,7 +254,6 @@
         const newTab = window.open();
         newTab.document.write('<img src="' + imageData + '" style="width:100%;height:auto;">');
         newTab.document.title = filename + ".png";
-
         deleteBtn.style.display = "";
         saveBtn.style.display = "";
         watermark.style.display = "none";
@@ -290,18 +287,15 @@
       const save = document.createElement("button");
       save.className = "save-btn";
       save.textContent = "📸 Save as Image";
-      save.onclick = () => {
-        downloadCardAsImage(card, `drop-${msg.id}`);
-      };
+      save.onclick = () => downloadCardAsImage(card, `drop-${msg.id}`);
 
       const watermark = document.createElement("div");
       watermark.className = "watermark";
       watermark.textContent = "HAYJAY.web";
 
-      // ✅ Use your own logo file
       const logo = document.createElement("img");
       logo.className = "logo-placeholder";
-      logo.src = "logo.png"; // your logo.png in the same folder
+      logo.src = "logo.png";
       logo.alt = "Logo";
 
       card.append(del, text, save, timestamp, watermark, logo);
@@ -330,7 +324,6 @@
         const title = document.createElement("h2");
         title.textContent = header;
         list.appendChild(title);
-
         msgs.forEach((msg, index) => {
           const card = createCard(msg, index === 0);
           list.appendChild(card);
@@ -341,13 +334,4 @@
     if (password === ADMIN_PASSWORD) {
       list.classList.remove("hidden");
       const q = query(collection(db, "drops"), orderBy("timestamp", "desc"));
-      onSnapshot(q, snapshot => renderMessages(snapshot));
-      updateTimestampLoop();
-    } else {
-      denied.classList.remove("hidden");
-    }
-  </script>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-</body>
-</html>
+      onSnapshot(q, snapshot => renderMessages
