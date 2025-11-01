@@ -68,28 +68,13 @@
     }
 
     @keyframes bounceIn {
-      0% {
-        opacity: 0;
-        transform: scale(0.3);
-      }
-      50% {
-        opacity: 1;
-        transform: scale(1.1);
-      }
-      70% {
-        transform: scale(0.95);
-      }
-      100% {
-        transform: scale(1);
-      }
+      0% { opacity: 0; transform: scale(0.3); }
+      50% { opacity: 1; transform: scale(1.1); }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); }
     }
 
-    .text {
-      font-size: 1.2rem;
-      color: #ff4d4d;
-      word-wrap: break-word;
-      margin-bottom: 1.5rem;
-    }
+    .text { font-size: 1.2rem; color: #ff4d4d; word-wrap: break-word; margin-bottom: 1.5rem; }
 
     .timestamp {
       font-size: 0.85rem;
@@ -110,10 +95,7 @@
       cursor: pointer;
     }
 
-    .delete-btn:hover {
-      color: #ff4d4d;
-      text-shadow: 0 0 6px #ff4d4d;
-    }
+    .delete-btn:hover { color: #ff4d4d; text-shadow: 0 0 6px #ff4d4d; }
 
     .save-btn {
       position: absolute;
@@ -126,10 +108,7 @@
       cursor: pointer;
     }
 
-    .save-btn:hover {
-      color: #ff4d4d;
-      text-shadow: 0 0 6px #ff4d4d;
-    }
+    .save-btn:hover { color: #ff4d4d; text-shadow: 0 0 6px #ff4d4d; }
 
     .watermark {
       font-size: 0.75rem;
@@ -142,7 +121,6 @@
       left: 15px;
     }
 
-    /* ✅ Logo placeholder */
     .logo-placeholder {
       position: absolute;
       top: 12px;
@@ -156,9 +134,7 @@
       filter: drop-shadow(0 0 6px #ff4d4d);
     }
 
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
 
     .back {
       position: absolute;
@@ -170,9 +146,7 @@
       cursor: pointer;
     }
 
-    .back:hover {
-      text-shadow: 0 0 5px #ff4d4d;
-    }
+    .back:hover { text-shadow: 0 0 5px #ff4d4d; }
   </style>
 </head>
 <body>
@@ -184,10 +158,13 @@
     <div id="denied" class="hidden" style="text-align: center;">❌ Access Denied</div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <!-- ✅ Firebase & html2canvas non-module scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+  <script>
+    // ✅ Firebase setup (works everywhere)
     const firebaseConfig = {
       apiKey: "AIzaSyDnFoUVpIbt6R7vYffl1tcKk-Wh0CnBuE0",
       authDomain: "mbbs-anonoy-2.firebaseapp.com",
@@ -196,14 +173,14 @@
       messagingSenderId: "946129798565",
       appId: "1:946129798565:web:4033df1bf6a5f0d0d7944c"
     };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const password = prompt("Enter admin password:");
     const ADMIN_PASSWORD = "abuadmbbs";
-
     const list = document.getElementById("messageList");
     const denied = document.getElementById("denied");
+
+    const password = prompt("Enter admin password:");
 
     function timeAgo(date) {
       const seconds = Math.floor((new Date() - date) / 1000);
@@ -224,16 +201,10 @@
     }
 
     const cardMap = new Map();
+    setInterval(() => {
+      cardMap.forEach(({ timestampElem, date }) => timestampElem.textContent = timeAgo(date));
+    }, 15000);
 
-    function updateTimestampLoop() {
-      setInterval(() => {
-        cardMap.forEach(({ timestampElem, date }) => {
-          timestampElem.textContent = timeAgo(date);
-        });
-      }, 15000);
-    }
-
-    // ✅ Opens image in new tab instead of download
     function downloadCardAsImage(cardElement, filename) {
       const deleteBtn = cardElement.querySelector(".delete-btn");
       const saveBtn = cardElement.querySelector(".save-btn");
@@ -279,9 +250,7 @@
       del.className = "delete-btn";
       del.textContent = "❌";
       del.onclick = async () => {
-        if (confirm("Delete this message?")) {
-          await deleteDoc(doc(db, "drops", msg.id));
-        }
+        if (confirm("Delete this message?")) await db.collection("drops").doc(msg.id).delete();
       };
 
       const save = document.createElement("button");
@@ -306,10 +275,7 @@
 
     function renderMessages(snapshot) {
       const messages = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        messages.push({ id: doc.id, ...data });
-      });
+      snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
 
       const grouped = {};
       messages.forEach(msg => {
@@ -324,14 +290,27 @@
         const title = document.createElement("h2");
         title.textContent = header;
         list.appendChild(title);
-        msgs.forEach((msg, index) => {
-          const card = createCard(msg, index === 0);
-          list.appendChild(card);
-        });
+        msgs.forEach((msg, i) => list.appendChild(createCard(msg, i === 0)));
       }
     }
 
     if (password === ADMIN_PASSWORD) {
       list.classList.remove("hidden");
-      const q = query(collection(db, "drops"), orderBy("timestamp", "desc"));
-      onSnapshot(q, snapshot => renderMessages
+      db.collection("drops").orderBy("timestamp", "desc").onSnapshot(renderMessages);
+    } else {
+      denied.classList.remove("hidden");
+    }
+  </script>
+
+  <!-- ✅ PWA service-worker registration -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js")
+          .then(reg => console.log("Service Worker registered:", reg.scope))
+          .catch(err => console.log("Service Worker failed:", err));
+      });
+    }
+  </script>
+</body>
+</html>
