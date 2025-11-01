@@ -64,53 +64,6 @@
       color: #ccc;
     }
 
-    .sticky-message {
-      margin-top: 20px;
-      padding: 1em;
-      border-radius: 10px;
-      box-shadow: 2px 4px 10px rgba(0,0,0,0.4);
-      max-width: 300px;
-      animation: fadeInOut 2s ease-in-out infinite, vibrate 0.2s ease 1;
-      min-height: 60px;
-      font-size: 0.95rem;
-      transition: background-color 0.5s;
-      position: relative;
-    }
-
-    .like-dislike {
-      margin-top: 10px;
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .like-dislike button {
-      background: transparent;
-      border: none;
-      font-size: 1.3rem;
-      cursor: pointer;
-    }
-
-    .disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-
-    @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateY(10px); }
-      10% { opacity: 1; transform: translateY(0); }
-      90% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-10px); }
-    }
-
-    @keyframes vibrate {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(-2px); }
-      50% { transform: translateX(2px); }
-      75% { transform: translateX(-1px); }
-      100% { transform: translateX(0); }
-    }
-
     #toast {
       position: fixed;
       top: 20px;
@@ -150,15 +103,28 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-8px); }
     }
+
+    .logo {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      z-index: 1000;
+      opacity: 0.9;
+      filter: drop-shadow(0 0 6px #ff4081);
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+  <img src="logo.png" alt="Logo" class="logo" />
   <h1>🕵️‍♂️ Drop your anonymous Message ☕</h1>
   <textarea id="messageBox" placeholder="Type your message..."></textarea>
   <div class="count" id="wordCount">Word count: 0 / 250</div>
   <button id="sendBtn" onclick="sendMessage()"><span>Send 🔥</span></button>
 
-  <div id="stickyContainer" class="sticky-message">Loading message...</div>
   <div id="toast">Message sent anonymously! <button onclick="hideToast()">✖</button></div>
 
   <!-- Sound Effects -->
@@ -168,8 +134,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
-      getFirestore, collection, addDoc, doc, onSnapshot, serverTimestamp,
-      updateDoc, increment
+      getFirestore, collection, addDoc, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -180,20 +145,16 @@
       messagingSenderId: "946129798565",
       appId: "1:946129798565:web:4033df1bf6a5f0d0d7944c"
     };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
     const messageBox = document.getElementById("messageBox");
     const wordCount = document.getElementById("wordCount");
     const sendBtn = document.getElementById("sendBtn");
-    const stickyContainer = document.getElementById("stickyContainer");
     const toast = document.getElementById("toast");
     const clickSound = document.getElementById("clickSound");
     const sentSound = document.getElementById("sentSound");
-
-    let allMessages = [];
-    let currentMsg = null;
-    let intervalHandle;
 
     messageBox.addEventListener("input", () => {
       const words = messageBox.value.trim().split(/\s+/).filter(w => w.length);
@@ -268,55 +229,6 @@
       }
       resetButton();
     };
-
-    const colors = ["#1f1f1f", "#2c2c2c", "#333333", "#3b3b3b", "#262626", "#292929", "#1a1a1a", "#242424", "#303030", "#181818"];
-    function getRandomColor() {
-      return colors[Math.floor(Math.random() * colors.length)];
-    }
-
-    function showMessage(msg) {
-      if (!msg) return stickyContainer.textContent = "Be the first to drop a message!";
-      const { id, text, likes, dislikes } = msg;
-      currentMsg = msg;
-      stickyContainer.style.backgroundColor = getRandomColor();
-
-      const liked = localStorage.getItem(`liked_${id}`) === "1";
-      const disliked = localStorage.getItem(`disliked_${id}`) === "1";
-
-      stickyContainer.innerHTML = `
-        "${text}"
-        <div class="like-dislike">
-          <button ${liked ? 'class="disabled"' : ''} onclick="vote('${id}','like',${liked})">👍 ${likes || 0}</button>
-          <button ${disliked ? 'class="disabled"' : ''} onclick="vote('${id}','dislike',${disliked})">👎 ${dislikes || 0}</button>
-        </div>
-      `;
-    }
-
-    function startRotation() {
-      if (intervalHandle) clearInterval(intervalHandle);
-      intervalHandle = setInterval(() => {
-        if (!allMessages.length) return;
-        const msg = allMessages[Math.floor(Math.random() * allMessages.length)];
-        showMessage(msg);
-      }, 5000);
-    }
-
-    window.vote = function(id, type, already) {
-      if (already) return;
-      playClick();
-      localStorage.setItem(`${type}d_${id}`, "1");
-      const ref = doc(db, "drops", id);
-      updateDoc(ref, { [type === 'like' ? 'likes' : 'dislikes']: increment(1) });
-    };
-
-    onSnapshot(collection(db, "drops"), snap => {
-      allMessages = [];
-      snap.docs.forEach(d => {
-        allMessages.push({ id: d.id, ...d.data() });
-      });
-      showMessage(allMessages[0]);
-      startRotation();
-    });
 
     // Play click on all button clicks
     document.querySelectorAll("button").forEach(btn => {
