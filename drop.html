@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>📩 Anonymous Drops (Admin)</title>
 
-  <!-- ✅ PWA manifest + theme -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0d0d0d">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -158,13 +157,11 @@
     <div id="denied" class="hidden" style="text-align: center;">❌ Access Denied</div>
   </div>
 
-  <!-- ✅ Firebase & html2canvas non-module scripts -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
-    // ✅ Firebase setup
     const firebaseConfig = {
       apiKey: "AIzaSyDnFoUVpIbt6R7vYffl1tcKk-Wh0CnBuE0",
       authDomain: "mbbs-anonoy-2.firebaseapp.com",
@@ -205,7 +202,7 @@
       cardMap.forEach(({ timestampElem, date }) => timestampElem.textContent = timeAgo(date));
     }, 15000);
 
-    // ✅ UPDATED: download directly as image
+    // ✅ Enhanced version: works even in PWA mode
     function downloadCardAsImage(cardElement, filename) {
       const deleteBtn = cardElement.querySelector(".delete-btn");
       const saveBtn = cardElement.querySelector(".save-btn");
@@ -217,24 +214,30 @@
       watermark.style.display = "block";
       logo.style.display = "block";
 
-      html2canvas(cardElement, {
-        backgroundColor: "#0d0d0d",
-        useCORS: true,
-        scale: 2
-      }).then(canvas => {
-        const imageData = canvas.toDataURL("image/png");
-        const link = document.createElement("a");
-        link.href = imageData;
-        link.download = `${filename}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        deleteBtn.style.display = "";
-        saveBtn.style.display = "";
-        watermark.style.display = "none";
-        logo.style.display = "none";
-      });
+      html2canvas(cardElement, { backgroundColor: "#0d0d0d", useCORS: true, scale: 2 })
+        .then(canvas => {
+          const imageData = canvas.toDataURL("image/png");
+          try {
+            const link = document.createElement("a");
+            link.href = imageData;
+            link.download = `${filename}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } catch (err) {
+            // If direct download fails (PWA mode), open manually
+            const newWin = window.open("");
+            newWin.document.write(
+              "<h3 style='font-family:sans-serif;color:#ff4d4d;text-align:center;'>Long-press to save image 👇</h3>" +
+              `<img src='${imageData}' style='width:100%;height:auto;display:block;margin:auto;'/>`
+            );
+          } finally {
+            deleteBtn.style.display = "";
+            saveBtn.style.display = "";
+            watermark.style.display = "none";
+            logo.style.display = "none";
+          }
+        });
     }
 
     function createCard(msg, isNew = false) {
@@ -307,7 +310,6 @@
     }
   </script>
 
-  <!-- ✅ PWA service-worker registration -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
